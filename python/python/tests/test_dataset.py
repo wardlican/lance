@@ -1266,6 +1266,32 @@ def test_get_fragments(tmp_path: Path):
     assert taken == pa.Table.from_pydict({"a": [18, 20, 33, 53], "b": [18, 20, 33, 53]})
 
 
+def test_fragment_metadata_list(tmp_path: Path):
+    table = pa.Table.from_pydict({"a": range(100), "b": range(100)})
+    base_dir = tmp_path / "test"
+    lance.write_dataset(table, base_dir, max_rows_per_file=50)
+
+    dataset = lance.dataset(base_dir)
+    meta_list = dataset.fragment_metadata_list()
+
+    assert len(meta_list) == dataset.count_fragments()
+    for entry in meta_list:
+        assert "id" in entry
+        assert "physical_rows" in entry
+        assert "has_deletion" in entry
+        assert entry["physical_rows"] > 0
+        assert entry["has_deletion"] is False
+
+    total_rows = sum(m["physical_rows"] for m in meta_list)
+    assert total_rows == 100
+
+    dataset.delete("a < 10")
+    dataset = lance.dataset(base_dir)
+    meta_after = dataset.fragment_metadata_list()
+    has_any_deletion = any(m["has_deletion"] for m in meta_after)
+    assert has_any_deletion
+
+
 def test_pickle_fragment(tmp_path: Path):
     table = pa.Table.from_pydict({"a": range(100), "b": range(100)})
     base_dir = tmp_path / "test"

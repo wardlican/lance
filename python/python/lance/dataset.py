@@ -1417,6 +1417,16 @@ class LanceDataset(pa.dataset.Dataset):
             return None
         return LanceFragment(self, fragment_id=None, fragment=raw_fragment)
 
+    def fragment_metadata_list(self) -> list[dict]:
+        """Return lightweight metadata for every fragment.
+
+        This is cheaper than :meth:`get_fragments` because it avoids
+        constructing full :class:`LanceFragment` wrappers.  Each entry
+        is a dict with keys ``id``, ``physical_rows`` and ``has_deletion``.
+        It is intended for shard-planning in distributed retrieval scenarios.
+        """
+        return self._ds.fragment_metadata_list()
+
     def io_stats_snapshot(self) -> IOStats:
         """
         Get a snapshot of current IO statistics without resetting counters.

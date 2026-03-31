@@ -2073,6 +2073,33 @@ impl Dataset {
         Ok(fragments)
     }
 
+    /// Return lightweight metadata for every fragment in the dataset.
+    ///
+    /// Each entry is a dict with keys ``id`` (fragment id) and
+    /// ``physical_rows`` (row count before deletions).  This is cheaper
+    /// than ``get_fragments`` because it avoids constructing full
+    /// ``FileFragment`` wrappers and is intended for shard-planning in
+    /// distributed retrieval scenarios.
+    fn fragment_metadata_list(self_: PyRef<'_, Self>) -> PyResult<Py<PyAny>> {
+        let py = self_.py();
+        let manifest = self_.ds.manifest();
+        let result = PyList::empty(py);
+        for fragment in manifest.fragments.as_ref() {
+            let dict = PyDict::new(py);
+            dict.set_item(intern!(py, "id"), fragment.id)?;
+            dict.set_item(
+                intern!(py, "physical_rows"),
+                fragment.physical_rows.unwrap_or(0),
+            )?;
+            dict.set_item(
+                intern!(py, "has_deletion"),
+                fragment.deletion_file.is_some(),
+            )?;
+            result.append(dict)?;
+        }
+        Ok(result.unbind().as_any().clone())
+    }
+
     fn get_fragment(self_: PyRef<'_, Self>, fragment_id: usize) -> PyResult<Option<FileFragment>> {
         if let Some(fragment) = self_.ds.get_fragment(fragment_id) {
             Ok(Some(FileFragment::new(fragment)))
