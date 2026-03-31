@@ -1274,7 +1274,7 @@ def test_fragment_metadata_list(tmp_path: Path):
     dataset = lance.dataset(base_dir)
     meta_list = dataset.fragment_metadata_list()
 
-    assert len(meta_list) == dataset.count_fragments()
+    assert len(meta_list) == len(dataset.get_fragments())
     for entry in meta_list:
         assert "id" in entry
         assert "physical_rows" in entry
